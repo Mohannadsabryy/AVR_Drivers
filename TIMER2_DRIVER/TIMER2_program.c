@@ -1,0 +1,127 @@
+/*
+ * TIMER2_program.c
+ *
+ *  Created on: Sep 11, 2023
+ *      Author: user
+ */
+#include "STD_TYPES.h"
+#include "BIT_MATH.h"
+
+#include "TIMER2_register.h"
+#include "TIMER2_private.h"
+#include "TIMER2_config.h"
+#include "TIMER2_interface.h"
+
+void (*TIMER2_CallBack)(void);
+
+void TIMER2_voidInit(void){
+
+	/*Select WAVEFORM_GENERATION_MODE*/
+	#if(WAVEFORM_GENERATION_MODE==NORMAL_MODE)
+		CLR_BIT(TCCR2,3);
+		CLR_BIT(TCCR2,6);
+	#elif(WAVEFORM_GENERATION_MODE==PHASE_CORRECT_PWM_MODE)
+		CLR_BIT(TCCR2,3);
+		SET_BIT(TCCR2,6);
+	#elif(WAVEFORM_GENERATION_MODE==CTC_MODE)
+		SET_BIT(TCCR2,3);
+		CLR_BIT(TCCR2,6);
+	#elif(WAVEFORM_GENERATION_MODE==FAST_PWM_MODE)
+		SET_BIT(TCCR2,3);
+		SET_BIT(TCCR2,6);
+	#endif
+
+	/*COMPARE_MATCH_OUTPUT_MODE*/
+	#if(WAVEFORM_GENERATION_MODE==CTC_MODE || WAVEFORM_GENERATION_MODE==NORMAL_MODE)
+		#if(COMPARE_MATCH_OUTPUT_MODE==DISCONNECTED)
+			CLR_BIT(TCCR2,4);
+			CLR_BIT(TCCR2,5);
+		#elif(COMPARE_MATCH_OUTPUT_MODE==TOGGLE)
+			SET_BIT(TCCR2,4);
+			CLR_BIT(TCCR2,5);
+		#elif(COMPARE_MATCH_OUTPUT_MODE==CLEAR)
+			CLR_BIT(TCCR2,4);
+			SET_BIT(TCCR2,5);
+		#elif(COMPARE_MATCH_OUTPUT_MODE==SET)
+			SET_BIT(TCCR2,4);
+			SET_BIT(TCCR2,5);
+		#endif
+	#elif(WAVEFORM_GENERATION_MODE==FAST_PWM_MODE || WAVEFORM_GENERATION_MODE==PHASE_CORRECT_PWM_MODE)
+		#if(COMPARE_MATCH_OUTPUT_MODE==DISCONNECTED)
+			CLR_BIT(TCCR2,4);
+			CLR_BIT(TCCR2,5);
+		#elif(COMPARE_MATCH_OUTPUT_MODE==CLEAR_ON_COMPARE)
+			CLR_BIT(TCCR2,4);
+			SET_BIT(TCCR2,5);
+		#elif(COMPARE_MATCH_OUTPUT_MODE==SET_ON_COMPARE)
+			SET_BIT(TCCR2,4);
+			SET_BIT(TCCR2,5);
+		#endif
+	#endif
+
+	/*Choose Prescaler*/
+	#if(CLK==NO_CLK)
+		CLR_BIT(TCCR2,0);
+		CLR_BIT(TCCR2,1);
+		CLR_BIT(TCCR2,2);
+	#elif(CLK==NO_PRES)
+		SET_BIT(TCCR2,0);
+		CLR_BIT(TCCR2,1);
+		CLR_BIT(TCCR2,2);
+	#elif(CLK==PRES_8)
+		CLR_BIT(TCCR2,0);
+		SET_BIT(TCCR2,1);
+		CLR_BIT(TCCR2,2);
+	#elif(CLK==PRES_32)
+		SET_BIT(TCCR2,0);
+		SET_BIT(TCCR2,1);
+		CLR_BIT(TCCR2,2);
+	#elif(CLK==PRES_64)
+		CLR_BIT(TCCR2,0);
+		CLR_BIT(TCCR2,1);
+		SET_BIT(TCCR2,2);
+	#elif(CLK==PRES_128)
+		SET_BIT(TCCR2,0);
+		CLR_BIT(TCCR2,1);
+		SET_BIT(TCCR2,2);
+	#elif(CLK==PRES_256)
+		CLR_BIT(TCCR2,0);
+		SET_BIT(TCCR2,1);
+		SET_BIT(TCCR2,2);
+	#elif(CLK==PRES_1024)
+		SET_BIT(TCCR2,0);
+		SET_BIT(TCCR2,1);
+		SET_BIT(TCCR2,2);
+	#endif
+
+	/*Enable interrupt*/
+	#if(WAVEFORM_GENERATION_MODE==NORMAL_MODE)
+		SET_BIT(TIMSK,6);
+	#elif(WAVEFORM_GENERATION_MODE==CTC_MODE)
+		SET_BIT(TIMSK,7);
+	#endif
+
+}
+
+void TIMER2_voidSetCallBack(void (*Copy_pvCallBack)(void)){
+	TIMER2_CallBack=Copy_pvCallBack;
+}
+
+#if(WAVEFORM_GENERATION_MODE==CTC_MODE)
+	void __vector_4(void) __attribute__((signal));
+	void __vector_4(void){
+		TIMER2_CallBack();
+	}
+#elif(WAVEFORM_GENERATION_MODE==NORMAL_MODE)
+	void __vector_5(void) __attribute__((signal));
+	void __vector_5(void){
+		TIMER2_CallBack();
+	}
+#endif
+
+void TIMER2_voidSetOCR2Val(u8 copy_u8OCR){
+	OCR2=copy_u8OCR;
+}
+void TIMER2_voidSetTCNT2Val(u8 copy_u8TCNT){
+	TCNT2=copy_u8TCNT;
+}
